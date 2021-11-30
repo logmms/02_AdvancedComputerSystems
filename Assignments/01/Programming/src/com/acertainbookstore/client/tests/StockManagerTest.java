@@ -467,12 +467,40 @@ public class StockManagerTest {
 		storeManager.addBooks(booksToAdd);
 
 		List<StockBook> booksInStoreList = storeManager.getBooks();
-		assertTrue(booksInStoreList.size() == 3);
+		assertEquals(3, booksInStoreList.size());
 
 		storeManager.removeAllBooks();
 
 		booksInStoreList = storeManager.getBooks();
-		assertTrue(booksInStoreList.size() == 0);
+		assertEquals(0, booksInStoreList.size());
+	}
+
+
+	/**
+	 * Tests basic getBooksInDemand functionality.
+	 *
+	 * @throws BookStoreException
+	 *             the book store exception
+	 */
+	@Test
+	public void testGetBooksInDemandBasic() throws BookStoreException {
+		List<StockBook> booksInDemand = storeManager.getBooksInDemand();
+		assertEquals(0, booksInDemand.size());
+
+		Set<BookCopy> booksToBuy = new HashSet<>();
+		booksToBuy.add(new BookCopy(TEST_ISBN, NUM_COPIES * 2));
+
+		// Try to buy books
+		try {
+			client.buyBooks(booksToBuy);
+			fail();
+		} catch (BookStoreException e) {
+			;
+		}
+
+		booksInDemand = storeManager.getBooksInDemand();
+		assertEquals(1, booksInDemand.size());
+		assertEquals((int) TEST_ISBN, booksInDemand.get(0).getISBN());
 	}
 
 	/**

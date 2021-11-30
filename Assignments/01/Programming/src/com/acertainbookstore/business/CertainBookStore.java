@@ -318,7 +318,8 @@ public class CertainBookStore implements BookStore, StockManager {
 		Collections.reverse(sortedRatings);
 		List<BookStoreBook> topRated = sortedRatings.subList(0, numBooks);
 
-		return topRated.stream().map(bookRating -> this.bookMap.get(bookRating.getISBN()).immutableBook())
+		return topRated.stream()
+				.map(bookRating -> this.bookMap.get(bookRating.getISBN()).immutableBook())
 				.collect(Collectors.toList());
 	}
 
@@ -328,8 +329,13 @@ public class CertainBookStore implements BookStore, StockManager {
 	 * @see com.acertainbookstore.interfaces.StockManager#getBooksInDemand()
 	 */
 	@Override
-	public synchronized List<StockBook> getBooksInDemand() throws BookStoreException {
-		throw new BookStoreException();
+	public synchronized List<StockBook> getBooksInDemand() {
+		Collection<BookStoreBook> bookMapValues = bookMap.values();
+
+		return bookMapValues.stream()
+				.filter(BookStoreBook::hadSaleMiss)
+				.map(BookStoreBook::immutableStockBook)
+				.collect(Collectors.toList());
 	}
 
 	/*

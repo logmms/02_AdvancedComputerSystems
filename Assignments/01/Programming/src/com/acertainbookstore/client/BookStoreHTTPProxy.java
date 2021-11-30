@@ -138,6 +138,18 @@ public class BookStoreHTTPProxy implements BookStore {
 		return (List<Book>) bookStoreResponse.getList();
 	}
 
+	/*
+	 * (non-Javadoc)
+	 *
+	 * @see com.acertainbookstore.interfaces.BookStore#rateBooks(java.util.Set)
+	 */
+	@Override
+	public void rateBooks(Set<BookRating> bookRating) throws BookStoreException {
+		String urlString = serverAddress + "/" + BookStoreMessageTag.RATEBOOKS;
+		BookStoreRequest bookStoreRequest = BookStoreRequest.newPostRequest(urlString, bookRating);
+		BookStoreUtility.performHttpExchange(client, bookStoreRequest, serializer.get());
+	}
+
 	/**
 	 * Stops the proxy.
 	 */
@@ -147,18 +159,6 @@ public class BookStoreHTTPProxy implements BookStore {
 		} catch (Exception ex) {
 			System.err.println(ex.getStackTrace());
 		}
-	}
-
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see com.acertainbookstore.interfaces.BookStore#rateBooks(java.util.Set)
-	 */
-	@Override
-	public void rateBooks(Set<BookRating> bookRating) throws BookStoreException {
-		String urlString = serverAddress + "/" + BookStoreMessageTag.RATEBOOKS;
-		BookStoreRequest bookStoreRequest = BookStoreRequest.newPostRequest(urlString, bookRating);
-		BookStoreUtility.performHttpExchange(client, bookStoreRequest, serializer.get());
 	}
 
 	/*
