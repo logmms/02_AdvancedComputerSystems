@@ -53,10 +53,12 @@ public class BankAccountTest {
 	 * Test correct balance.
 	 */
 	@Test
-	public void testCorrectBalance() {
-
+	public void testCorrectBalance() throws AccountException {
 		// Tests balance after series of deposit-withdraw invocations
-		fail("Not implemented");
+		// fail("Not implemented");
+		client.deposit(50);
+		int balance = client.getBalance();
+		assertTrue(balance == 50);
 	}
 
 	/**

@@ -6,17 +6,13 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import com.acertainbookstore.business.*;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import com.acertainbookstore.business.Book;
-import com.acertainbookstore.business.BookCopy;
-import com.acertainbookstore.business.CertainBookStore;
-import com.acertainbookstore.business.ImmutableStockBook;
-import com.acertainbookstore.business.StockBook;
 import com.acertainbookstore.client.BookStoreHTTPProxy;
 import com.acertainbookstore.client.StockManagerHTTPProxy;
 import com.acertainbookstore.interfaces.BookStore;
@@ -347,6 +343,69 @@ public class BookStoreTest {
 		List<StockBook> booksInStorePostTest = storeManager.getBooks();
 		assertTrue(booksInStorePreTest.containsAll(booksInStorePostTest)
 				&& booksInStorePreTest.size() == booksInStorePostTest.size());
+	}
+
+	/**
+	 * Test that several books can be rated
+	 *
+	 * @throws BookStoreException
+	 */
+
+	@Test
+	public void testRateBooks() throws BookStoreException {
+		StockBook stockBook = getDefaultBook();
+
+		Set<BookRating> ratings = new HashSet<BookRating>();
+		ratings.add(new BookRating(TEST_ISBN, 3));
+
+		client.rateBooks(ratings);
+		List<StockBook> books = storeManager.getBooks();
+		assertEquals(books.get(0).getTitle(), stockBook.getTitle());
+	}
+
+	/**
+	 * Test that negative ratings are disallowed
+	 *
+	 * @throws BookStoreException
+	 */
+
+	@Test(expected = BookStoreException.class)
+	public void testNegativelyRateBooks() throws BookStoreException {
+		Set<BookRating> ratings = new HashSet<BookRating>();
+		BookRating rating = new BookRating(TEST_ISBN, -3);
+		ratings.add(rating);
+
+		// Assert some error here
+		client.rateBooks(ratings);
+	}
+
+	/**
+	 * Test that negative ratings are disallowed
+	 *
+	 * @throws BookStoreException
+	 */
+
+	@Test
+	public void testNegativelyRateBooksAllOrNothing() throws BookStoreException {
+		StockBook stockBook = getDefaultBook();
+		addBooks(1, 1);
+		addBooks(2, 1);
+
+		Set<BookRating> ratings = new HashSet<BookRating>();
+		ratings.add(new BookRating(TEST_ISBN, 3));
+		ratings.add(new BookRating(1, 3));
+		ratings.add(new BookRating(2, -3));
+		// Assert some error here
+		try {
+			client.rateBooks(ratings);
+			fail();
+		} catch (BookStoreException ex) {
+			;
+		}
+		List<StockBook> books = storeManager.getBooks();
+		assertEquals(books.get(0).getNumTimesRated(), 0);
+		assertEquals(books.get(1).getNumTimesRated(), 0);
+		assertEquals(books.get(2).getNumTimesRated(), 0);
 	}
 
 	/**

@@ -37,7 +37,7 @@ public class BookRating {
 	/**
 	 * Sets the ISBN of the book.
 	 *
-	 * @param iSBN
+	 * @param isbn
 	 *            the new ISBN
 	 */
 	public void setISBN(int isbn) {

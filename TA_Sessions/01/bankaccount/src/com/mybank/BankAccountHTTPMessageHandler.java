@@ -77,6 +77,7 @@ public class BankAccountHTTPMessageHandler extends AbstractHandler {
 
 			case DEPOSIT:
 				// Write your implementation here!
+				deposit(request, response);
 				break;
 
 			case WITHDRAW:
@@ -91,6 +92,32 @@ public class BankAccountHTTPMessageHandler extends AbstractHandler {
 
 		// Mark the request as handled so that the HTTP response can be sent
 		baseRequest.setHandled(true);
+	}
+
+	/**
+	 * Withdraws from the account.
+	 *
+	 * @param request
+	 *            the request
+	 * @param response
+	 *            the response
+	 * @throws IOException
+	 *             Signals that an I/O exception has occurred.
+	 */
+	private void deposit(HttpServletRequest request, HttpServletResponse response) throws IOException {
+		byte[] serializedRequestContent = getSerializedRequestContent(request);
+		Integer n = (Integer) serializer.get().deserialize(serializedRequestContent);
+
+		BankAccountResponse bankAccountResponse = new BankAccountResponse();
+
+		try {
+			account.deposit(n);
+		} catch (Exception ex) {
+			bankAccountResponse.setException(new AccountException("Could not deposit.", ex));
+		}
+
+		byte[] serializedResponseContent = serializer.get().serialize(bankAccountResponse);
+		response.getOutputStream().write(serializedResponseContent);
 	}
 
 	/**

@@ -90,6 +90,7 @@ public class BookStoreBook extends ImmutableBook {
 	/**
 	 * Gets the number of copies.
 	 *
+	 *
 	 * @return the number of copies
 	 */
 	public int getNumCopies() {
@@ -157,7 +158,7 @@ public class BookStoreBook extends ImmutableBook {
 	 * Sets the number of times that a client wanted to buy a book when it was
 	 * not in stock, also known as the number of sale misses.
 	 *
-	 * @param saleMisses
+	 * @param numSaleMisses
 	 *            the new sale misses
 	 */
 	private void setNumSaleMisses(long numSaleMisses) {

@@ -28,12 +28,12 @@ public interface BookStore {
 	 * Applies the BookRatings in the set, i.e. rates each book with their
 	 * respective rating.
 	 *
-	 * @param bookRating
+	 * @param bookRatings
 	 *            the book rating
 	 * @throws BookStoreException
 	 *             the book store exception
 	 */
-	public void rateBooks(Set<BookRating> bookRating) throws BookStoreException;
+	public void rateBooks(Set<BookRating> bookRatings) throws BookStoreException;
 
 	/**
 	 * Gets the list of books corresponding to the set of ISBNs.

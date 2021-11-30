@@ -1,15 +1,7 @@
 package com.acertainbookstore.business;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.Map.Entry;
-import java.util.Random;
-import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -317,7 +309,17 @@ public class CertainBookStore implements BookStore, StockManager {
 	 */
 	@Override
 	public synchronized List<Book> getTopRatedBooks(int numBooks) throws BookStoreException {
-		throw new BookStoreException();
+		if (numBooks < 1) {
+			throw new BookStoreException("numBooks = " + numBooks + ", but it must be positive");
+		}
+
+		List<BookStoreBook> sortedRatings = new ArrayList<BookStoreBook>(this.bookMap.values());
+		sortedRatings.sort(Comparator.comparing(BookStoreBook::getAverageRating));
+		Collections.reverse(sortedRatings);
+		List<BookStoreBook> topRated = sortedRatings.subList(0, numBooks);
+
+		return topRated.stream().map(bookRating -> this.bookMap.get(bookRating.getISBN()).immutableBook())
+				.collect(Collectors.toList());
 	}
 
 	/*
@@ -336,8 +338,26 @@ public class CertainBookStore implements BookStore, StockManager {
 	 * @see com.acertainbookstore.interfaces.BookStore#rateBooks(java.util.Set)
 	 */
 	@Override
-	public synchronized void rateBooks(Set<BookRating> bookRating) throws BookStoreException {
-		throw new BookStoreException();
+	public synchronized void rateBooks(Set<BookRating> bookRatings) throws BookStoreException {
+		if (bookRatings == null) {
+			throw new BookStoreException(BookStoreConstants.NULL_INPUT);
+		}
+
+		for (BookRating bookToRate : bookRatings) {
+			// Validate that the ISBN is valid and in stock
+			validateISBNInStock(bookToRate.getISBN());
+			int rating = bookToRate.getRating();
+
+			if(BookStoreUtility.isInvalidRating(rating)) {
+				throw new BookStoreException(BookStoreConstants.RATING + rating + BookStoreConstants.INVALID );
+			}
+		}
+
+		for (BookRating bookToRate : bookRatings) {
+			BookStoreBook book = bookMap.get(bookToRate.getISBN());
+			book.addRating(bookToRate.getRating());
+		}
+
 	}
 
 	/*

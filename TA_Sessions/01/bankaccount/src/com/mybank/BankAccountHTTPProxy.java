@@ -135,5 +135,9 @@ public class BankAccountHTTPProxy implements Account {
 	 */
 	public void deposit(int n) throws AccountException {
 		// Write your code here.
+		String urlString = serverAddress + "/" + MessageTag.DEPOSIT;
+		Integer integerN = n;
+		BankAccountRequest bankAccountRequest = BankAccountRequest.newPostRequest(urlString, integerN);
+		BankAccountUtility.performHttpExchange(client, bankAccountRequest, serializer.get());
 	}
 }
