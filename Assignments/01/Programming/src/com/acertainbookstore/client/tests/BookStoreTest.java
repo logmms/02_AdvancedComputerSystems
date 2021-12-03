@@ -2,6 +2,7 @@ package com.acertainbookstore.client.tests;
 
 import static org.junit.Assert.*;
 
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -81,6 +82,28 @@ public class BookStoreTest {
 		StockBook book = new ImmutableStockBook(isbn, "Test of Thrones", "George RR Testin'", (float) 10, copies, 0, 0,
 				0, false);
 		booksToAdd.add(book);
+		storeManager.addBooks(booksToAdd);
+	}
+
+	public void rateBook(int isbn, int rating) throws BookStoreException {
+		Set<BookRating> booksToRate = new HashSet<BookRating>();
+		booksToRate.add(new BookRating(isbn, rating));
+		client.rateBooks(booksToRate);
+	}
+
+	/**
+	 * Helper method to add some books and rate them.
+	 *
+	 * @throws BookStoreException
+	 *             the book store exception
+	 */
+	public void addRatedBooks() throws BookStoreException {
+		Set<StockBook> booksToAdd = new HashSet<StockBook>();
+		booksToAdd.add(new ImmutableStockBook(TEST_ISBN + 1, "The Art of Computer Programming", "Donald Knuth",
+				(float) 300, NUM_COPIES, 0, 1, 4, true));
+		booksToAdd.add(new ImmutableStockBook(TEST_ISBN + 2, "The C Programming Language",
+				"Dennis Ritchie and Brian Kerninghan", (float) 50, NUM_COPIES, 0, 1, 3, true));
+
 		storeManager.addBooks(booksToAdd);
 	}
 
@@ -260,6 +283,127 @@ public class BookStoreTest {
 	}
 
 	/**
+	 * Test that several books can be rated
+	 *
+	 * @throws BookStoreException
+	 */
+
+	@Test
+	public void testRateBooks() throws BookStoreException {
+		// Add a book to the store
+		addBooks(1, 1);
+
+		// Set of books to rate
+		Set<BookRating> ratings = new HashSet<BookRating>();
+		ratings.add(new BookRating(TEST_ISBN, 3));
+		ratings.add(new BookRating(1, 0));
+
+		// Try to rate the books
+		client.rateBooks(ratings);
+
+		List<StockBook> listBooks = storeManager.getBooks();
+		StockBook defaultBook = listBooks.get(0);
+		StockBook addedBook = listBooks.get(1);
+
+		assertTrue(defaultBook.getTotalRating() == 0
+				&& defaultBook.getNumTimesRated() == 1
+				&& defaultBook.getAverageRating() == 0);
+
+		assertTrue(addedBook.getTotalRating() == 3
+				&& addedBook.getNumTimesRated() == 1
+				&& addedBook.getAverageRating() == 3);
+	}
+
+	/**
+	 * Test that negative ratings are disallowed
+	 *
+	 * @throws BookStoreException
+	 */
+
+	@Test
+	public void testNegativelyRateBooksAllOrNothing() throws BookStoreException {
+		// Add a book to the store
+		addBooks(1, 1);
+
+		// Set of books to rate
+		Set<BookRating> ratings = new HashSet<BookRating>();
+		ratings.add(new BookRating(TEST_ISBN, 3)); // valid
+		ratings.add(new BookRating(1, -3)); // invalid
+
+		// Try to rate the books
+		try {
+			client.rateBooks(ratings);
+			fail();
+		} catch (BookStoreException ex) {
+			;
+		}
+
+		List<StockBook> listBooks = storeManager.getBooks();
+		StockBook defaultBook = listBooks.get(0);
+		StockBook addedBook = listBooks.get(1);
+
+		assertTrue(defaultBook.getTotalRating() == 0
+				&& defaultBook.getNumTimesRated() == 0
+				&& defaultBook.getAverageRating() == -1.0f);
+
+		assertTrue(addedBook.getTotalRating() == 0
+				&& addedBook.getNumTimesRated() == 0
+				&& addedBook.getAverageRating() == -1.0f);
+	}
+
+	/**
+	 * Test that ratings are disallowed for invalid ISBNs
+	 *
+	 * @throws BookStoreException
+	 */
+
+	@Test
+	public void testInvalidISBNRateBooksAllOrNothing() throws BookStoreException {
+		// Set of books to rate
+		Set<BookRating> ratings = new HashSet<BookRating>();
+		ratings.add(new BookRating(TEST_ISBN, 3)); // valid
+		ratings.add(new BookRating(-1, 3)); // invalid
+
+		// Try to rate the books
+		try {
+			client.rateBooks(ratings);
+			fail();
+		} catch (BookStoreException ex) {
+			;
+		}
+
+		List<StockBook> books = storeManager.getBooks();
+		StockBook defaultBook = books.get(0);
+
+		assertTrue(defaultBook.getTotalRating() == 0
+				&& defaultBook.getNumTimesRated() == 0
+				&& defaultBook.getAverageRating() == -1.0f);
+	}
+
+	/**
+	 * Test that several books can be rated
+	 *
+	 * @throws BookStoreException
+	 */
+
+	@Test
+	public void testCorrectRatingCalc() throws BookStoreException {
+		// Add multiple ratings to the same book
+		rateBook(TEST_ISBN, 1);
+		rateBook(TEST_ISBN, 2);
+		rateBook(TEST_ISBN, 3);
+		rateBook(TEST_ISBN, 4);
+		rateBook(TEST_ISBN, 5);
+
+		List<StockBook> listBooks = storeManager.getBooks();
+		StockBook defaultBook = listBooks.get(0);
+
+		assertTrue(defaultBook.getTotalRating() == 15
+				&& defaultBook.getNumTimesRated() == 5
+				&& defaultBook.getAverageRating() == 3.0f);
+	}
+
+	/**
 	 * Tests that all books can be retrieved.
 	 *
 	 * @throws BookStoreException
@@ -272,9 +416,9 @@ public class BookStoreTest {
 
 		Set<StockBook> booksToAdd = new HashSet<StockBook>();
 		booksToAdd.add(new ImmutableStockBook(TEST_ISBN + 1, "The Art of Computer Programming", "Donald Knuth",
-				(float) 300, NUM_COPIES, 0, 0, 0, false));
+				(float) 300, NUM_COPIES, 0, 0, 0, true));
 		booksToAdd.add(new ImmutableStockBook(TEST_ISBN + 2, "The C Programming Language",
-				"Dennis Ritchie and Brian Kerninghan", (float) 50, NUM_COPIES, 0, 0, 0, false));
+				"Dennis Ritchie and Brian Kerninghan", (float) 50, NUM_COPIES, 0, 0, 0, true));
 
 		booksAdded.addAll(booksToAdd);
 
@@ -346,67 +490,166 @@ public class BookStoreTest {
 	}
 
 	/**
-	 * Test that several books can be rated
+	 * Test that top-rated books are retrieved.
 	 *
 	 * @throws BookStoreException
+	 *             the book store exception
 	 */
-
 	@Test
-	public void testRateBooks() throws BookStoreException {
-		StockBook stockBook = getDefaultBook();
+	public void testGetTopRatedBooks() throws BookStoreException {
+		addRatedBooks();
 
-		Set<BookRating> ratings = new HashSet<BookRating>();
-		ratings.add(new BookRating(TEST_ISBN, 3));
+		// Get top-rated books
+		List<Book> listBooks = client.getTopRatedBooks(2);
+		Book topRatedBook = listBooks.get(0);
 
-		client.rateBooks(ratings);
-		List<StockBook> books = storeManager.getBooks();
-		assertEquals(books.get(0).getTitle(), stockBook.getTitle());
+		assertTrue(listBooks.size() == 2
+				&& topRatedBook.getISBN() == TEST_ISBN + 1
+				&& topRatedBook.getTitle().equals("The Art of Computer Programming")
+				&& topRatedBook.getAuthor().equals("Donald Knuth")
+				&& topRatedBook.getPrice() == (float) 300);
 	}
 
 	/**
-	 * Test that negative ratings are disallowed
+	 * Test that top-rated books cannot be retrieved for a negative number.
 	 *
 	 * @throws BookStoreException
-	 */
-
-	@Test(expected = BookStoreException.class)
-	public void testNegativelyRateBooks() throws BookStoreException {
-		Set<BookRating> ratings = new HashSet<BookRating>();
-		BookRating rating = new BookRating(TEST_ISBN, -3);
-		ratings.add(rating);
-
-		// Assert some error here
-		client.rateBooks(ratings);
-	}
-
-	/**
-	 * Test that negative ratings are disallowed
-	 *
-	 * @throws BookStoreException
+	 *             the book store exception
 	 */
 
 	@Test
-	public void testNegativelyRateBooksAllOrNothing() throws BookStoreException {
-		StockBook stockBook = getDefaultBook();
-		addBooks(1, 1);
-		addBooks(2, 1);
+	public void testGetNegativeTopRatedBooks() throws BookStoreException {
+		addRatedBooks();
 
-		Set<BookRating> ratings = new HashSet<BookRating>();
-		ratings.add(new BookRating(TEST_ISBN, 3));
-		ratings.add(new BookRating(1, 3));
-		ratings.add(new BookRating(2, -3));
-		// Assert some error here
+		List<Book> listBooks = new ArrayList<Book>();
+
+		// Try to get top-rated books
 		try {
-			client.rateBooks(ratings);
+			listBooks = client.getTopRatedBooks(-2);
 			fail();
 		} catch (BookStoreException ex) {
 			;
 		}
-		List<StockBook> books = storeManager.getBooks();
-		assertEquals(books.get(0).getNumTimesRated(), 0);
-		assertEquals(books.get(1).getNumTimesRated(), 0);
-		assertEquals(books.get(2).getNumTimesRated(), 0);
+
+		assertTrue(listBooks.size() == 0);
 	}
+
+	/**
+	 * Test that top-rated books are retrieved for a K larger than the number of books in stock.
+	 *
+	 * @throws BookStoreException
+	 *             the book store exception
+	 */
+	@Test
+	public void testGetLargeKTopRatedBooks() throws BookStoreException {
+		addRatedBooks();
+//
+//		// Get top-rated books
+		List<Book> listBooks = client.getTopRatedBooks(5);
+		Book topRatedBook = listBooks.get(0);
+//		assertTrue(true);
+		assertTrue(
+				listBooks.size() == 3
+//				topRatedBook.getISBN() == TEST_ISBN + 1
+//				&& topRatedBook.getTitle().equals("The Art of Computer Programming")
+//				&& topRatedBook.getAuthor().equals("Donald Knuth")
+//				&& topRatedBook.getPrice() == (float) 300
+		);
+	}
+
+	/**
+	 * Test that top-rated books are retrieved.
+	 *
+	 * @throws BookStoreException
+	 *             the book store exception
+	 */
+	@Test
+	public void testGetTopRatedBooksDynamic() throws BookStoreException {
+		addRatedBooks();
+
+		// Get top-rated books
+		List<Book> listBooks = client.getTopRatedBooks(3);
+		Book topRatedBook = listBooks.get(0);
+
+		assertTrue(	topRatedBook.getISBN() == TEST_ISBN + 1
+				&& topRatedBook.getTitle().equals("The Art of Computer Programming")
+				&& topRatedBook.getAuthor().equals("Donald Knuth")
+				&& topRatedBook.getPrice() == (float) 300);
+
+		// Set of new ratings
+		Set<BookRating> fstRating = new HashSet<BookRating>();
+		fstRating.add(new BookRating(TEST_ISBN + 2, 5));
+		client.rateBooks(fstRating);
+		Set<BookRating> sndRating = new HashSet<BookRating>();
+		sndRating.add(new BookRating(TEST_ISBN + 2, 5));
+		client.rateBooks(sndRating);
+
+		// Get new top-rated books
+		List<Book> newListBooks = client.getTopRatedBooks(2);
+		Book newTopRatedBook = newListBooks.get(0);
+
+		assertTrue(	newTopRatedBook.getISBN() == TEST_ISBN + 2
+				&& newTopRatedBook.getTitle().equals("The C Programming Language")
+				&& newTopRatedBook.getAuthor().equals("Dennis Ritchie and Brian Kerninghan")
+				&& newTopRatedBook.getPrice() == (float) 50
+		);
+	}
+
+	/**
+	 * Test editor picks can be retrieved.
+	 *
+	 * @throws BookStoreException
+	 * 			 the book store exception
+	 */
+	@Test
+	public void testGetEditorPicks() throws BookStoreException {
+		addRatedBooks();
+
+		// Get editor picks
+		List<Book> listBooks = client.getEditorPicks(1);
+
+		assertTrue(listBooks.size() == 1);
+	}
+
+	/**
+	 * Tests editor picks cannot be retrieved for a negative K.
+	 *
+	 * @throws BookStoreException
+	 * 			 the book store exception
+	 */
+	@Test
+	public void testGetNegativeKEditorPicks() throws BookStoreException {
+		addRatedBooks();
+
+		List<Book> listBooks = new ArrayList<Book>();
+
+		// Try to get editor picks
+		try {
+			listBooks = client.getEditorPicks(-2);
+			fail();
+		} catch (BookStoreException ex) {
+			;
+		}
+
+		assertTrue(listBooks.size() == 0);
+	}
+
+	/**
+	 * Test all editor picks is retrieved for K larger than the number of editor picks.
+	 *
+	 * @throws BookStoreException
+	 * 			 the book store exception
+	 */
+	@Test
+	public void testGetLargeKEditorPicks() throws BookStoreException {
+		addRatedBooks();
+
+		// Get editor picks
+		List<Book> listBooks = client.getEditorPicks(5);
+
+		assertTrue(listBooks.size() == 2);
+	}
+
 
 	/**
 	 * Tear down after class.

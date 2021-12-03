@@ -40,7 +40,7 @@ public class StockManagerTest {
 	private static final Integer NUM_COPIES = 5;
 
 	/** The local test. */
-	private static boolean localTest = true;
+	private static boolean localTest = false;
 
 	/** The store manager. */
 	private static StockManager storeManager;
@@ -342,6 +342,21 @@ public class StockManagerTest {
 	}
 
 	/**
+	 * Checks the method returns the current state of all books in the system
+	 *
+	 * @throws BookStoreException
+	 * 			 the book store exception
+	 */
+	@Test
+	public void testGetBooks() throws BookStoreException {
+		List<StockBook> booksInStore = storeManager.getBooks();
+
+		assertTrue(booksInStore.size() == 1
+			&& booksInStore.contains(getDefaultBook()));
+	}
+
+
+	/**
 	 * Helper method to make an Editor's pick.
 	 *
 	 * @param isbn
@@ -383,6 +398,32 @@ public class StockManagerTest {
 
 		assertTrue(editorPick.equals(defaultBookAdded));
 	}
+
+	/**
+	 * Tests that editors picks respects the all-or-nothing semantics on invalid ISBNs.
+	 *
+	 * @throws BookStoreException
+	 * 			 the book store exception
+	 */
+	@Test
+	public void testEditorPickInvalidISBN() throws BookStoreException {
+		// Set of editors picks with one valid and one invalid ISBN.
+		Set<BookEditorPick> editorPicksToAdd = new HashSet<BookEditorPick>();
+		editorPicksToAdd.add(new BookEditorPick(TEST_ISBN, true));
+		editorPicksToAdd.add(new BookEditorPick(-1, true));
+
+		// Try to add the editors picks.
+		try {
+			storeManager.updateEditorPicks(editorPicksToAdd);
+			fail();
+		} catch (BookStoreException ex) {
+			;
+		}
+
+		List<Book> editorPicks = client.getEditorPicks(1);
+		assertEquals(editorPicks.size(), 0);
+	}
+
 
 	/**
 	 * Checks that a book can be removed.
@@ -429,6 +470,29 @@ public class StockManagerTest {
 	}
 
 	/**
+	 * Test that removeBooks respect the all-or-nothing semantic
+	 *
+	 * @throws BookStoreException
+	 *             the book store exception
+	 */
+	@Test
+	public void testRemoveBooksAllOrNothing() throws  BookStoreException {
+		Set<Integer> isbnSet = new HashSet<Integer>();
+		isbnSet.add(TEST_ISBN);
+		isbnSet.add(-1);
+
+		try {
+			storeManager.removeBooks(isbnSet);
+			fail();
+		} catch (BookStoreException ex) {
+			;
+		}
+
+		List<StockBook> booksInStoreList = storeManager.getBooks();
+		assertTrue(booksInStoreList.size() == 1);
+	}
+
+	/**
 	 * Tests basic getBooksByISBN for the default book.
 	 *
 	 * @throws BookStoreException
@@ -449,6 +513,31 @@ public class StockManagerTest {
 
 		List<StockBook> listBooks = storeManager.getBooksByISBN(isbnSet);
 		assertTrue(booksToAdd.containsAll(listBooks) && booksToAdd.size() == listBooks.size());
+	}
+
+	/**
+	 * Test that getBooksByISN respects the all-or-nothing semantics
+	 *
+	 * @throw BookStoreException
+	 * 			the book store exception
+	 */
+	@Test
+	public void testGetBooksByISBNAllOrNothing() throws BookStoreException {
+		Set<Integer> isbnSet = new HashSet<Integer>();
+		isbnSet.add(TEST_ISBN); // Valid
+		isbnSet.add(-1); // Invalid
+
+		List<StockBook> listBooks = new ArrayList<>();
+
+		// try to get books by ISBN
+		try {
+			listBooks = storeManager.getBooksByISBN(isbnSet);
+			fail();
+		} catch (BookStoreException ex) {
+			;
+		}
+
+		assertTrue(listBooks.isEmpty());
 	}
 
 	/**

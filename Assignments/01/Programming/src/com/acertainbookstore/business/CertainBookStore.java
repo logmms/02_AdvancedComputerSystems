@@ -316,7 +316,14 @@ public class CertainBookStore implements BookStore, StockManager {
 		List<BookStoreBook> sortedRatings = new ArrayList<BookStoreBook>(this.bookMap.values());
 		sortedRatings.sort(Comparator.comparing(BookStoreBook::getAverageRating));
 		Collections.reverse(sortedRatings);
-		List<BookStoreBook> topRated = sortedRatings.subList(0, numBooks);
+
+		List<BookStoreBook> topRated;
+
+		if (bookMap.size() < numBooks) {
+			topRated = sortedRatings;
+		} else {
+			topRated = sortedRatings.subList(0, numBooks);
+		}
 
 		return topRated.stream()
 				.map(bookRating -> this.bookMap.get(bookRating.getISBN()).immutableBook())

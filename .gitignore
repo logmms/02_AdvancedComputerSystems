@@ -1,6 +1,12 @@
+# Misc
+*.DS_Store
+*.idea
+
+# Folders
+*Reading
+
 # Compiled class file
 *.class
-*.DS_Store
 
 # Log file
 *.log
@@ -9,14 +15,14 @@
 *.ctxt
 
 # Mobile Tools for Java (J2ME)
-# .mtj.tmp/
+.mtj.tmp/
 
 # # Package Files #
 # *.jar
 # *.war
 # *.nar
 # *.ear
-# *.zip
+*.zip
 #*.tar.gz
 #*.rar
 
