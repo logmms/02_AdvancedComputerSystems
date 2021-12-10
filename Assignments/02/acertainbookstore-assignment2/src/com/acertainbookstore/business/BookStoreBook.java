@@ -2,6 +2,9 @@ package com.acertainbookstore.business;
 
 import com.acertainbookstore.utils.BookStoreUtility;
 
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+
 /**
  * {@link BookStoreBook} implements all parts of the book. Only parts of it are
  * available in the bookstore client and stock manager, cf. the {@link Book} and
@@ -18,6 +21,9 @@ public class BookStoreBook extends ImmutableBook {
 
 	/** The total rating. */
 	private long totalRating;
+
+	/** Low level locking. */
+	public static final ReadWriteLock lock = new ReentrantReadWriteLock(true);
 
 	/** The number of times rated. */
 	private long numTimesRated;
@@ -86,6 +92,13 @@ public class BookStoreBook extends ImmutableBook {
 	public long getNumTimesRated() {
 		return numTimesRated;
 	}
+
+	/**
+	 * Get the lock
+	 *
+	 * @return the lock
+	 */
+	public ReadWriteLock getLock() { return lock;}
 
 	/**
 	 * Gets the number of copies.

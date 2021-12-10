@@ -10,6 +10,8 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Random;
 import java.util.Set;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.stream.Collectors;
 
 import com.acertainbookstore.interfaces.BookStore;
@@ -25,6 +27,8 @@ import com.acertainbookstore.utils.BookStoreUtility;
  * @see StockManager
  */
 public class TwoLevelLockingConcurrentCertainBookStore implements BookStore, StockManager {
+
+	private static final ReadWriteLock dbLock = new ReentrantReadWriteLock(true);
 
 	/** The mapping of books from ISBN to {@link BookStoreBook}. */
 	private Map<Integer, BookStoreBook> bookMap = null;
@@ -130,19 +134,22 @@ public class TwoLevelLockingConcurrentCertainBookStore implements BookStore, Sto
 			throw new BookStoreException(BookStoreConstants.NULL_INPUT);
 		}
 
+		dbLock.readLock().lock();
 		for (BookCopy bookCopy : bookCopiesSet) {
 			validate(bookCopy);
 		}
-
-		BookStoreBook book;
 
 		// Update the number of copies
 		for (BookCopy bookCopy : bookCopiesSet) {
 			isbn = bookCopy.getISBN();
 			numCopies = bookCopy.getNumCopies();
-			book = bookMap.get(isbn);
+			BookStoreBook book = bookMap.get(isbn);
+
+			book.getLock().writeLock().lock();
 			book.addCopies(numCopies);
+			book.getLock().writeLock().unlock();
 		}
+		dbLock.readLock().unlock();
 	}
 
 	/*
@@ -151,11 +158,13 @@ public class TwoLevelLockingConcurrentCertainBookStore implements BookStore, Sto
 	 * @see com.acertainbookstore.interfaces.StockManager#getBooks()
 	 */
 	public List<StockBook> getBooks() {
+		dbLock.readLock().lock();
 		Collection<BookStoreBook> bookMapValues = bookMap.values();
-
-		return bookMapValues.stream()
+		List<StockBook> books = bookMapValues.stream()
 				.map(book -> book.immutableStockBook())
 				.collect(Collectors.toList());
+		dbLock.readLock().unlock();
+		return books;
 	}
 
 	/*

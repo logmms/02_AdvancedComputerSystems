@@ -2,6 +2,9 @@ package com.acertainbookstore.business;
 
 import com.acertainbookstore.utils.BookStoreConstants;
 
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+
 /**
  * {@link ImmutableBook} is the object that gets sent back to the bookstore
  * client as a {@link Book}. We do not allow the bookstore client to make any
