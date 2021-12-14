@@ -36,7 +36,7 @@ public class ConcurrencyTest {
     private static final int TEST_ISBN = 3044560;
 
     /** The Constant NUM_COPIES. */
-    private static final int NUM_COPIES = 5;
+    private static final int NUM_COPIES = 100;
 
     /** The local test. */
     private static boolean localTest = true;
@@ -157,7 +157,7 @@ public class ConcurrencyTest {
      */
     @Test
     public void testConcurrentAddCopiesAndBuy() throws InterruptedException, BookStoreException {
-        int numCalls = 5;
+        int numCalls = 100;
         Set<BookCopy> booksToBuy = new HashSet<BookCopy>();
         booksToBuy.add(new BookCopy(TEST_ISBN, 1));
 
@@ -170,7 +170,7 @@ public class ConcurrencyTest {
             {
                 for (int i = 0; i < numCalls; i++) {
                     try {
-                        System.out.println(Thread.currentThread().getName() + " Buying book");
+//                        System.out.println(Thread.currentThread().getName() + " Buying book");
                         client.buyBooks(booksToBuy);
                     } catch (BookStoreException e) {
                         ;
@@ -186,7 +186,7 @@ public class ConcurrencyTest {
             {
                 for (int i = 0; i < numCalls; i++) {
                     try {
-                        System.out.println(Thread.currentThread().getName() + " Adding copies");
+//                        System.out.println(Thread.currentThread().getName() + " Adding copies");
                         storeManager.addCopies(booksToAdd);
                     } catch (BookStoreException e) {
                         ;
@@ -199,7 +199,7 @@ public class ConcurrencyTest {
         runClients(new Test1C1(), new Test1C2());
         List<StockBook> stockBooks = storeManager.getBooks();
         assertEquals(1, stockBooks.size());
-        assertEquals(5, stockBooks.get(0).getNumCopies());
+        assertEquals(numCalls, stockBooks.get(0).getNumCopies());
     }
 
 
@@ -215,10 +215,10 @@ public class ConcurrencyTest {
     public void testConcurrentAddCopiesBuyRead() throws InterruptedException, BookStoreException {
         int numCalls = 100;
         Set<BookCopy> booksToBuy = new HashSet<BookCopy>();
-        booksToBuy.add(new BookCopy(TEST_ISBN, 5));
+        booksToBuy.add(new BookCopy(TEST_ISBN, NUM_COPIES));
 
         Set<BookCopy> booksToAdd = new HashSet<BookCopy>();
-        booksToAdd.add(new BookCopy(TEST_ISBN, 5));
+        booksToAdd.add(new BookCopy(TEST_ISBN, NUM_COPIES));
 
         class Test2C1 implements Runnable
         {
@@ -244,7 +244,7 @@ public class ConcurrencyTest {
                     try {
                         List<StockBook> stockBooks = storeManager.getBooks();
 
-                        if(5 != stockBooks.get(0).getNumCopies() && 0 != stockBooks.get(0).getNumCopies()) {
+                        if(numCalls != stockBooks.get(0).getNumCopies() && 0 != stockBooks.get(0).getNumCopies()) {
                             invalid = true;
                         }
                     } catch (BookStoreException e) {
