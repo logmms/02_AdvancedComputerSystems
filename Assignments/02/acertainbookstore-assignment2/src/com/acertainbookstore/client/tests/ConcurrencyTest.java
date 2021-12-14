@@ -41,7 +41,7 @@ public class ConcurrencyTest {
     private static boolean localTest = true;
 
     /** Single lock test */
-    private static boolean singleLock = true;
+    private static boolean singleLock = false;
 
     /** The store manager. */
     private static StockManager storeManager;
