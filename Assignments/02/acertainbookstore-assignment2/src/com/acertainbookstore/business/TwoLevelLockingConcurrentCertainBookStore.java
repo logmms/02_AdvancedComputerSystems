@@ -157,7 +157,6 @@ public class TwoLevelLockingConcurrentCertainBookStore implements BookStore, Sto
 			}
 		}
 
-
 		List<Integer> isbns = bookCopiesSet.stream().map(BookCopy::getISBN).collect(Collectors.toList());
 		lockMap.writeLock(isbns);
 
@@ -171,7 +170,6 @@ public class TwoLevelLockingConcurrentCertainBookStore implements BookStore, Sto
 		}
 
 		lockMap.writeUnlock(isbns);
-
 		dbLock.readLock().unlock();
 	}
 
@@ -220,13 +218,13 @@ public class TwoLevelLockingConcurrentCertainBookStore implements BookStore, Sto
 		}
 
 		List<Integer> isbns = editorPicks.stream().map(BookEditorPick::getISBN).collect(Collectors.toList());
-		lockMap.readLock(isbns);
+		lockMap.writeLock(isbns);
 
 		for (BookEditorPick editorPickArg : editorPicks) {
 			bookMap.get(editorPickArg.getISBN()).setEditorPick(editorPickArg.isEditorPick());
 		}
 
-		lockMap.readUnlock(isbns);
+		lockMap.writeUnlock(isbns);
 		dbLock.readLock().unlock();
 	}
 
@@ -376,12 +374,15 @@ public class TwoLevelLockingConcurrentCertainBookStore implements BookStore, Sto
 		}
 
 		dbLock.readLock().lock();
+		List<Integer> isbns = bookMap.values().stream().map(BookStoreBook::getISBN).collect(Collectors.toList());
+		lockMap.readLock(isbns);
 
 		List<BookStoreBook> listAllEditorPicks = bookMap.entrySet().stream()
 				.map(pair -> pair.getValue())
 				.filter(book -> book.isEditorPick())
 				.collect(Collectors.toList());
 
+		lockMap.readUnlock(isbns);
 		dbLock.readLock().unlock();
 
 		// Find numBooks random indices of books that will be picked.
@@ -390,7 +391,6 @@ public class TwoLevelLockingConcurrentCertainBookStore implements BookStore, Sto
 		int rangePicks = listAllEditorPicks.size();
 
 		if (rangePicks <= numBooks) {
-
 			// We need to add all books.
 			for (int i = 0; i < listAllEditorPicks.size(); i++) {
 				tobePicked.add(i);
@@ -450,7 +450,9 @@ public class TwoLevelLockingConcurrentCertainBookStore implements BookStore, Sto
 	public void removeAllBooks() throws BookStoreException {
 		dbLock.writeLock().lock();
 		lockMap.deleteAllLocks();
+
 		bookMap.clear();
+
 		dbLock.writeLock().unlock();
 	}
 
