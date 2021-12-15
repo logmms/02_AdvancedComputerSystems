@@ -7,7 +7,7 @@ import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 public class BookStoreLockMap {
-    private Map<Integer, ReadWriteLock> lockMap = new HashMap<Integer, ReadWriteLock>();
+    private final Map<Integer, ReadWriteLock> lockMap = new HashMap<>();
     private static final ReadWriteLock mapLock = new ReentrantReadWriteLock(true);
 
     public void readLock(List<Integer> isbns) {

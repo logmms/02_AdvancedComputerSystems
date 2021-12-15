@@ -30,8 +30,8 @@ public class TwoLevelLockingConcurrentCertainBookStore implements BookStore, Sto
 	private static final ReadWriteLock dbLock = new ReentrantReadWriteLock(true);
 
 	/** The mapping of books from ISBN to {@link BookStoreBook}. */
-	private Map<Integer, BookStoreBook> bookMap = null;
-	private BookStoreLockMap lockMap = null;
+	private Map<Integer, BookStoreBook> bookMap;
+	private BookStoreLockMap lockMap;
 
 
 	/**

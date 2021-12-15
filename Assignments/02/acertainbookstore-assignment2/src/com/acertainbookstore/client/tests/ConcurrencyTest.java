@@ -2,21 +2,17 @@ package com.acertainbookstore.client.tests;
 
 import static org.junit.Assert.*;
 
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
+import java.util.function.Function;
+import java.util.concurrent.ThreadLocalRandom;
 
+import com.acertainbookstore.business.*;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import com.acertainbookstore.business.BookCopy;
-import com.acertainbookstore.business.SingleLockConcurrentCertainBookStore;
-import com.acertainbookstore.business.ImmutableStockBook;
-import com.acertainbookstore.business.StockBook;
-import com.acertainbookstore.business.TwoLevelLockingConcurrentCertainBookStore;
 import com.acertainbookstore.client.BookStoreHTTPProxy;
 import com.acertainbookstore.client.StockManagerHTTPProxy;
 import com.acertainbookstore.interfaces.BookStore;
@@ -110,18 +106,20 @@ public class ConcurrencyTest {
                 false);
     }
 
-    public void runClients(Runnable c1, Runnable c2) throws InterruptedException {
-        Thread t1 = new Thread(c1);
-        t1.setName("Client 1");
+    public void runClients(List<Runnable> clients) throws InterruptedException {
+        List<Thread> threads = new ArrayList<>();
+        for (Runnable client : clients) {
+            Thread t = new Thread(client);
+            threads.add(t);
+        }
 
-        Thread t2 = new Thread(c2);
-        t2.setName("Client 2");
+        for (Thread t : threads) {
+            t.start();
+        }
 
-        t1.start();
-        t2.start();
-
-        t1.join();
-        t2.join();
+        for (Thread t : threads) {
+            t.join();
+        }
     }
 
     /**
@@ -149,27 +147,27 @@ public class ConcurrencyTest {
     }
 
     /**
-     * Test concurrent add book copies and buy books.
+     * TEST 1
+     * Test concurrent add book copies and buy books. Checks that WW conflicts does not occur
      *
      * @throws BookStoreException
      *             the book store exception
      */
     @Test
     public void testConcurrentAddCopiesAndBuy() throws InterruptedException, BookStoreException {
-        int numCalls = 100;
         Set<BookCopy> booksToBuy = new HashSet<BookCopy>();
         booksToBuy.add(new BookCopy(TEST_ISBN, 1));
 
         Set<BookCopy> booksToAdd = new HashSet<BookCopy>();
         booksToAdd.add(new BookCopy(TEST_ISBN, 1));
 
+
         class Test1C1 implements Runnable
         {
             public void run()
             {
-                for (int i = 0; i < numCalls; i++) {
+                for (int i = 0; i < NUM_COPIES; i++) {
                     try {
-//                        System.out.println(Thread.currentThread().getName() + " Buying book");
                         client.buyBooks(booksToBuy);
                     } catch (BookStoreException e) {
                         ;
@@ -183,9 +181,8 @@ public class ConcurrencyTest {
         {
             public void run()
             {
-                for (int i = 0; i < numCalls; i++) {
+                for (int i = 0; i < NUM_COPIES; i++) {
                     try {
-//                        System.out.println(Thread.currentThread().getName() + " Adding copies");
                         storeManager.addCopies(booksToAdd);
                     } catch (BookStoreException e) {
                         ;
@@ -195,16 +192,16 @@ public class ConcurrencyTest {
             }
         }
 
-        runClients(new Test1C1(), new Test1C2());
+        runClients(List.of(new Test1C1(), new Test1C2()));
         List<StockBook> stockBooks = storeManager.getBooks();
         assertEquals(1, stockBooks.size());
-        assertEquals(numCalls, stockBooks.get(0).getNumCopies());
+        assertEquals(NUM_COPIES, stockBooks.get(0).getNumCopies());
     }
-
 
     private static boolean invalid = false;
 
     /**
+     * TEST 2
      * Test concurrent add book copies, buy book copies and get books.
      *
      * @throws BookStoreException
@@ -212,18 +209,21 @@ public class ConcurrencyTest {
      */
     @Test
     public void testConcurrentAddCopiesBuyRead() throws InterruptedException, BookStoreException {
-        int numCalls = 100;
+        addBooks(1337, NUM_COPIES);
+
         Set<BookCopy> booksToBuy = new HashSet<BookCopy>();
         booksToBuy.add(new BookCopy(TEST_ISBN, NUM_COPIES));
+        booksToBuy.add(new BookCopy(1337, NUM_COPIES));
 
         Set<BookCopy> booksToAdd = new HashSet<BookCopy>();
         booksToAdd.add(new BookCopy(TEST_ISBN, NUM_COPIES));
+        booksToAdd.add(new BookCopy(1337, NUM_COPIES));
 
         class Test2C1 implements Runnable
         {
             public void run()
             {
-                for (int i = 0; i < numCalls; i++) {
+                for (int i = 0; i < NUM_COPIES; i++) {
                     try {
                         client.buyBooks(booksToBuy);
                         storeManager.addCopies(booksToAdd);
@@ -239,11 +239,14 @@ public class ConcurrencyTest {
         {
             public void run()
             {
-                for (int i = 0; i < numCalls; i++) {
+                for (int i = 0; i < NUM_COPIES; i++) {
                     try {
                         List<StockBook> stockBooks = storeManager.getBooks();
 
-                        if(numCalls != stockBooks.get(0).getNumCopies() && 0 != stockBooks.get(0).getNumCopies()) {
+                        if(NUM_COPIES != stockBooks.get(0).getNumCopies()
+                                && NUM_COPIES != stockBooks.get(1).getNumCopies()
+                                && 0 != stockBooks.get(0).getNumCopies()
+                                && 0 != stockBooks.get(1).getNumCopies()) {
                             invalid = true;
                         }
                     } catch (BookStoreException e) {
@@ -254,8 +257,142 @@ public class ConcurrencyTest {
             }
         }
 
-        runClients(new Test2C1(), new Test2C2());
+        runClients(List.of(new Test2C1(), new Test2C2()));
         assertFalse(invalid);
+    }
+
+
+    /**
+     * TEST 3
+     * Test reading Uncommitted Data (WR Conflicts, “dirty reads”)
+     * T1: R(A), W(A),                    R(B), W(B), Abort
+     * T2:                R(A), W(A), C
+     * Abort is simulated with adding copies an invalid isbn
+     * @throws BookStoreException
+     *             the book store exception
+     */
+    @Test
+    public void testDirtyReads() throws InterruptedException, BookStoreException {
+        Set<BookCopy> booksToBuy = new HashSet<BookCopy>();
+        booksToBuy.add(new BookCopy(TEST_ISBN, 1));
+
+        Set<BookCopy> booksToAdd = new HashSet<BookCopy>();
+        booksToAdd.add(new BookCopy(TEST_ISBN, 1));
+        booksToAdd.add(new BookCopy(1337, 1));
+
+        class Test1C1 implements Runnable
+        {
+            public void run()
+            {
+                for (int i = 0; i < NUM_COPIES; i++) {
+                    try {
+                        client.buyBooks(booksToBuy);
+                    } catch (BookStoreException e) {
+                        ;
+                    }
+                }
+
+            }
+        }
+
+        class Test1C2 implements Runnable
+        {
+            public void run()
+            {
+                for (int i = 0; i < NUM_COPIES; i++) {
+                    try {
+                        storeManager.addCopies(booksToAdd);
+                    } catch (BookStoreException e) {
+                        ;
+                    }
+                }
+
+            }
+        }
+
+        runClients(List.of(new Test1C1(), new Test1C2()));
+        List<StockBook> testBook = storeManager.getBooksByISBN(new HashSet<>(List.of(TEST_ISBN)));
+        assertEquals(1, testBook.size());
+        assertEquals(0, testBook.get(0).getNumCopies());
+    }
+
+
+
+    /**
+     * Test that the before-or-after atomicity
+     *
+     * @throws BookStoreException
+     *             the book store exception
+     */
+    @Test
+    public void testConcurrentDeadLock() throws InterruptedException, BookStoreException {
+        int numCalls = 100;
+
+        class RandomTransactionClient implements Runnable {
+            public void run() {
+                for (int i = 0; i < numCalls; i++) {
+                    int randomNum = ThreadLocalRandom.current().nextInt(0, 9 + 1);
+                    int randomISBN = TEST_ISBN + ThreadLocalRandom.current().nextInt(0, 4 + 1);
+                    Set<Integer> isbnList = new HashSet<Integer>();
+                    try{
+                      switch (randomNum) {
+                          case 0:
+                              addBooks( randomISBN, 5);
+                              break;
+                          case 1:
+                              Set<BookCopy> bookCopiesSet = new HashSet<BookCopy>();
+                              bookCopiesSet.add(new BookCopy(randomISBN, 5));
+                              storeManager.addCopies(bookCopiesSet);
+                              break;
+                          case 2:
+                              isbnList.add(randomISBN);
+                              storeManager.getBooks();
+                              break;
+                          case 3:
+                              Set<BookEditorPick> editorPicksVals = new HashSet<BookEditorPick>();
+                              editorPicksVals.add(new BookEditorPick(randomISBN, true));
+                              storeManager.updateEditorPicks(editorPicksVals);
+                              break;
+                          case 4:
+                              Set<BookCopy> booksToBuy = new HashSet<BookCopy>();
+                              booksToBuy.add(new BookCopy(TEST_ISBN, NUM_COPIES));
+                              client.buyBooks(booksToBuy);
+                              break;
+                          case 5:
+                              Set<Integer> isbnSet = new HashSet<Integer>();
+                              isbnSet.add(randomISBN);
+                              storeManager.getBooksByISBN(isbnSet);
+                              break;
+                          case 6:
+                              isbnList.add(randomISBN);
+                              client.getBooks(isbnList);
+                              break;
+                          case 7:
+                              client.getEditorPicks(1);
+                              break;
+                          case 8:
+                              storeManager.removeAllBooks();
+                              break;
+                          case 9:
+                              storeManager.removeBooks(isbnList);
+                              break;
+                          default:
+                              break;
+                      }
+                    } catch (BookStoreException ex) {
+                        continue;
+                    }
+                }
+            }
+        }
+
+        runClients(List.of(
+                new RandomTransactionClient(),
+                new RandomTransactionClient(),
+                new RandomTransactionClient(),
+                new RandomTransactionClient()
+        ));
+        assertTrue(true);
     }
 
 
