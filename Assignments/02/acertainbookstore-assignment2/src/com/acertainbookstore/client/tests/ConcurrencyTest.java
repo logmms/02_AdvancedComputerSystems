@@ -155,11 +155,15 @@ public class ConcurrencyTest {
      */
     @Test
     public void testConcurrentAddCopiesAndBuy() throws InterruptedException, BookStoreException {
+        addBooks(1337, NUM_COPIES);
+
         Set<BookCopy> booksToBuy = new HashSet<BookCopy>();
         booksToBuy.add(new BookCopy(TEST_ISBN, 1));
+        booksToBuy.add(new BookCopy(1337, 1));
 
         Set<BookCopy> booksToAdd = new HashSet<BookCopy>();
         booksToAdd.add(new BookCopy(TEST_ISBN, 1));
+        booksToAdd.add(new BookCopy(1337, 1));
 
 
         class Test1C1 implements Runnable
@@ -319,7 +323,7 @@ public class ConcurrencyTest {
 
 
     /**
-     * Test that the before-or-after atomicity
+     * Test for deadlocks
      *
      * @throws BookStoreException
      *             the book store exception
@@ -335,52 +339,42 @@ public class ConcurrencyTest {
                     int randomISBN = TEST_ISBN + ThreadLocalRandom.current().nextInt(0, 4 + 1);
                     Set<Integer> isbnList = new HashSet<Integer>();
                     try{
-                      switch (randomNum) {
-                          case 0:
-                              addBooks( randomISBN, 5);
-                              break;
-                          case 1:
-                              Set<BookCopy> bookCopiesSet = new HashSet<BookCopy>();
-                              bookCopiesSet.add(new BookCopy(randomISBN, 5));
-                              storeManager.addCopies(bookCopiesSet);
-                              break;
-                          case 2:
-                              isbnList.add(randomISBN);
-                              storeManager.getBooks();
-                              break;
-                          case 3:
-                              Set<BookEditorPick> editorPicksVals = new HashSet<BookEditorPick>();
-                              editorPicksVals.add(new BookEditorPick(randomISBN, true));
-                              storeManager.updateEditorPicks(editorPicksVals);
-                              break;
-                          case 4:
-                              Set<BookCopy> booksToBuy = new HashSet<BookCopy>();
-                              booksToBuy.add(new BookCopy(TEST_ISBN, NUM_COPIES));
-                              client.buyBooks(booksToBuy);
-                              break;
-                          case 5:
-                              Set<Integer> isbnSet = new HashSet<Integer>();
-                              isbnSet.add(randomISBN);
-                              storeManager.getBooksByISBN(isbnSet);
-                              break;
-                          case 6:
-                              isbnList.add(randomISBN);
-                              client.getBooks(isbnList);
-                              break;
-                          case 7:
-                              client.getEditorPicks(1);
-                              break;
-                          case 8:
-                              storeManager.removeAllBooks();
-                              break;
-                          case 9:
-                              storeManager.removeBooks(isbnList);
-                              break;
-                          default:
-                              break;
-                      }
-                    } catch (BookStoreException ex) {
-                        continue;
+                        switch (randomNum) {
+                            case 0 -> addBooks(randomISBN, 5);
+                            case 1 -> {
+                                Set<BookCopy> bookCopiesSet = new HashSet<BookCopy>();
+                                bookCopiesSet.add(new BookCopy(randomISBN, 5));
+                                storeManager.addCopies(bookCopiesSet);
+                            }
+                            case 2 -> {
+                                isbnList.add(randomISBN);
+                                storeManager.getBooks();
+                            }
+                            case 3 -> {
+                                Set<BookEditorPick> editorPicksVals = new HashSet<BookEditorPick>();
+                                editorPicksVals.add(new BookEditorPick(randomISBN, true));
+                                storeManager.updateEditorPicks(editorPicksVals);
+                            }
+                            case 4 -> {
+                                Set<BookCopy> booksToBuy = new HashSet<BookCopy>();
+                                booksToBuy.add(new BookCopy(TEST_ISBN, NUM_COPIES));
+                                client.buyBooks(booksToBuy);
+                            }
+                            case 5 -> {
+                                Set<Integer> isbnSet = new HashSet<Integer>();
+                                isbnSet.add(randomISBN);
+                                storeManager.getBooksByISBN(isbnSet);
+                            }
+                            case 6 -> {
+                                isbnList.add(randomISBN);
+                                client.getBooks(isbnList);
+                            }
+                            case 7 -> client.getEditorPicks(1);
+                            case 8 -> storeManager.removeAllBooks();
+                            case 9 -> storeManager.removeBooks(isbnList);
+                            default -> { }
+                        }
+                    } catch (BookStoreException ignored) {
                     }
                 }
             }
