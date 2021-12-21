@@ -30,9 +30,18 @@ public class CertainWorkload {
 	 * @param args
 	 */
 	public static void main(String[] args) throws Exception {
-		int numConcurrentWorkloadThreads = 10;
+		System.out.println("threads, throughput, latency");
+		for (int i = 1; i <= 128; i++) {
+			System.out.print(i + ", ");
+			Thread.sleep(100);
+			tits(i);
+		}
+	}
+
+	private static void tits(int numConcurrentWorkloadThreads) throws Exception {
+		//int numConcurrentWorkloadThreads = 16;
 		String serverAddress = "http://localhost:8081";
-		boolean localTest = true;
+		boolean localTest = false;
 		List<WorkerRunResult> workerRunResults = new ArrayList<WorkerRunResult>();
 		List<Future<WorkerRunResult>> runResults = new ArrayList<Future<WorkerRunResult>>();
 
@@ -90,8 +99,39 @@ public class CertainWorkload {
 	 * @param workerRunResults
 	 */
 	public static void reportMetric(List<WorkerRunResult> workerRunResults) {
+		int totalFrequentBookStoreInteractionRuns = 0;
+		int successfulFrequentBookStoreInteractionRuns = 0;
+		int totalRuns = 0;
+		// Latency in miliseconds
+		int totalLatency = 0;
+		float goodput = 0;
+		float throughput = 0;
+
+		for (WorkerRunResult result : workerRunResults) {
+			totalFrequentBookStoreInteractionRuns += result.getTotalFrequentBookStoreInteractionRuns();
+			successfulFrequentBookStoreInteractionRuns += result.getSuccessfulFrequentBookStoreInteractionRuns();
+			totalRuns += result.getTotalRuns();
+			goodput += (float) result.getSuccessfulFrequentBookStoreInteractionRuns() / (float)((float) result.getElapsedTimeInNanoSecs() / 1000000);
+			throughput += (float) result.getTotalFrequentBookStoreInteractionRuns() / ((float) result.getElapsedTimeInNanoSecs() / 1000000);
+			totalLatency += result.getElapsedTimeInNanoSecs() / 100000;
+		}
+
+		float failureRate = 1 - goodput / throughput;
+		if (failureRate > 0.1) {
+			System.out.println("Failure rate too high");
+		}
+
+		float customerInteractionRate = (float) totalFrequentBookStoreInteractionRuns / totalRuns;
+		if (0.55 > customerInteractionRate || customerInteractionRate > 0.65) {
+			System.out.println("Imbalanced customer interactions");
+		}
+
+		float avgLatency = (float) totalLatency / successfulFrequentBookStoreInteractionRuns;
+
+		System.out.println(throughput + ", " + avgLatency);
 		// TODO: You should aggregate metrics and output them for plotting here
 	}
+
 
 	/**
 	 * Generate the data in bookstore before the workload interactions are run
@@ -100,7 +140,7 @@ public class CertainWorkload {
 	 * 
 	 */
 	public static void initializeBookStoreData(BookStore bookStore, StockManager stockManager) throws BookStoreException {
-		booksToAdd =
+		Integer a = 2;
 		// TODO: You should initialize data for your bookstore here
 
 	}

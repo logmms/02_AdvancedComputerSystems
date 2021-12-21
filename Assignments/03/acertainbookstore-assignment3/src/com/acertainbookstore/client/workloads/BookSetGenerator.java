@@ -1,6 +1,10 @@
 package com.acertainbookstore.client.workloads;
 
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.Random;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import com.acertainbookstore.business.StockBook;
 
@@ -21,7 +25,18 @@ public class BookSetGenerator {
 	 * @return
 	 */
 	public Set<Integer> sampleFromSetOfISBNs(Set<Integer> isbns, int num) {
-		return null;
+		if (isbns.size() == 0) {
+			return isbns;
+		}
+		ArrayList<Integer> isbnsAsList = new ArrayList<>(isbns);
+		HashSet<Integer> sampledISBNs = new HashSet<>();
+		Random r = new Random();
+		for (int n = 0; n < num; n++) {
+			Integer i = r.nextInt() * isbnsAsList.size();
+			sampledISBNs.add(isbnsAsList.get(i));
+			isbnsAsList.remove(i);
+		}
+		return sampledISBNs;
 	}
 
 	/**
@@ -31,7 +46,7 @@ public class BookSetGenerator {
 	 * @return
 	 */
 	public Set<StockBook> nextSetOfStockBooks(int num) {
-		return null;
+		return new HashSet<StockBook>();
 	}
 
 }
