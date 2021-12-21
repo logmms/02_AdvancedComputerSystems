@@ -102,8 +102,11 @@ public class Worker implements Callable<WorkerRunResult> {
      */
     private void runRareStockManagerInteraction() throws BookStoreException {
 		List<StockBook> books = configuration.getStockManager().getBooks();
+		Set<Integer> booksISBNs = books.stream().map(StockBook::getISBN).collect(Collectors.toSet());
+
 		Set<StockBook> newBooks = configuration.getBookSetGenerator().nextSetOfStockBooks(configuration.getNumBooksToAdd());
-		newBooks.removeAll(books);
+		newBooks.removeIf(book -> booksISBNs.contains(book.getISBN()));
+
 		configuration.getStockManager().addBooks(newBooks);
     }
 

@@ -3,13 +3,14 @@
  */
 package com.acertainbookstore.client.workloads;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
 import com.acertainbookstore.business.CertainBookStore;
+import com.acertainbookstore.business.ImmutableStockBook;
+import com.acertainbookstore.business.StockBook;
 import com.acertainbookstore.client.BookStoreHTTPProxy;
 import com.acertainbookstore.client.StockManagerHTTPProxy;
 import com.acertainbookstore.interfaces.BookStore;
@@ -111,13 +112,13 @@ public class CertainWorkload {
 			totalFrequentBookStoreInteractionRuns += result.getTotalFrequentBookStoreInteractionRuns();
 			successfulFrequentBookStoreInteractionRuns += result.getSuccessfulFrequentBookStoreInteractionRuns();
 			totalRuns += result.getTotalRuns();
-			goodput += (float) result.getSuccessfulFrequentBookStoreInteractionRuns() / (float)((float) result.getElapsedTimeInNanoSecs() / 1000000);
+			goodput += (float) result.getSuccessfulFrequentBookStoreInteractionRuns() / ((float) result.getElapsedTimeInNanoSecs() / 1000000);
 			throughput += (float) result.getTotalFrequentBookStoreInteractionRuns() / ((float) result.getElapsedTimeInNanoSecs() / 1000000);
 			totalLatency += result.getElapsedTimeInNanoSecs() / 100000;
 		}
 
 		float failureRate = 1 - goodput / throughput;
-		if (failureRate > 0.1) {
+		if (failureRate > 0.01) {
 			System.out.println("Failure rate too high");
 		}
 
@@ -129,9 +130,7 @@ public class CertainWorkload {
 		float avgLatency = (float) totalLatency / successfulFrequentBookStoreInteractionRuns;
 
 		System.out.println(throughput + ", " + avgLatency);
-		// TODO: You should aggregate metrics and output them for plotting here
 	}
-
 
 	/**
 	 * Generate the data in bookstore before the workload interactions are run
@@ -140,8 +139,13 @@ public class CertainWorkload {
 	 * 
 	 */
 	public static void initializeBookStoreData(BookStore bookStore, StockManager stockManager) throws BookStoreException {
-		Integer a = 2;
-		// TODO: You should initialize data for your bookstore here
-
+		stockManager.removeAllBooks();
+		int numInitialBooks = 100;
+		Set<StockBook> booksToAdd = new HashSet<StockBook>();
+		BookSetGenerator bookSetGenerator = new BookSetGenerator();
+		for (int i = 0; i < numInitialBooks; i++) {
+			booksToAdd.add(bookSetGenerator.generateRandomStockBook(i+1));
+		}
+		stockManager.addBooks(booksToAdd);
 	}
 }
